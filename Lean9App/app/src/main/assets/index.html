@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lean Interval Timer — Pro</title>
+  <style>
+    :root{
+      --bg:#0b0b0c;--card:#151518;--muted:#9aa3ab;--accent:#ff6a00;--accent-2:#27ae60;--error:#e63946;--ring:#20222a;
+      --text:#e6e6ea;--text-strong:#ffffff;--ok:#25d366;--inprog:#ffbf00
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Inter,Arial,sans-serif;background:linear-gradient(180deg,#0b0b0c 0%,#0f1014 100%);color:var(--text);display:grid;place-items:start;}
+    .container{max-width:1000px;width:100%;margin:24px auto;padding:20px}
+    .grid{display:grid;gap:16px}
+
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;box-shadow:0 10px 28px rgba(0,0,0,.35);}
+    .header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--ring);position:relative}
+    h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.2px}
+    .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    button{appearance:none;border-radius:12px;border:1px solid var(--ring);background:var(--accent);color:#111;padding:10px 12px;font-size:14px;font-weight:700;cursor:pointer;transition:transform .04s ease,opacity .2s}
+    button:hover{opacity:.95}
+    button:active{transform:translateY(1px)}
+    .btn-secondary{background:#1c1f28;color:var(--text)}
+    .btn-good{background:var(--accent-2);color:#0b120e}
+    .btn-danger{background:var(--error)}
+
+    /* TIMER */
+    .display{padding:18px 22px;display:grid;gap:10px}
+    .crumb{display:flex;gap:8px;justify-content:center;color:var(--muted);font-size:13px}
+    .crumb .sep{opacity:.5}
+    .big-time{font-variant-numeric:tabular-nums;letter-spacing:1px;font-size:64px;font-weight:800;text-align:center}
+    .big-time.phase-work{color:var(--accent)}
+    .big-time.phase-rest{color:var(--accent-2)}
+    .big-time.phase-getready{color:var(--inprog)}
+    .sub{display:flex;justify-content:center;gap:18px;color:var(--muted)}
+    .stack{gap:42px}
+    .stack .stacked{display:grid;gap:4px;justify-items:center}
+    .wc-text{color:var(--text-strong);text-align:center;font-weight:600}
+
+    .exercises{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0 18px 6px}
+    .exercise{border:1px solid var(--ring);border-radius:12px;padding:12px 10px;min-height:70px;text-align:center;display:grid;place-items:center;background:#0f1116}
+    .exercise.active{border-color:var(--accent);outline:2px solid #ff6a0022;background:#152019}
+
+    /* Dots: centered under each exercise */
+    .dots3{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:8px 18px 4px}
+    .dots-cell{display:flex;justify-content:center}
+    .dots-row{display:flex;gap:10px;padding:2px 0}
+    .dot{width:14px;height:14px;border-radius:999px;border:1px solid #2b2f3a;background:#0f1116}
+    .dot.done{background:var(--accent-2);border-color:var(--accent-2)}
+    .dot.current{background:var(--accent)}
+
+    /* HISTORY (collapsible, under timer) */
+    .history{padding:6px 20px 16px;display:grid;gap:12px}
+    details.cycle{border:1px solid var(--ring);border-radius:12px;background:#0f1116}
+    details.cycle[open]{background:#10141b}
+    details.cycle summary{list-style:none;cursor:pointer;padding:12px 14px;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px}
+    details.cycle summary::-webkit-details-marker{display:none}
+    .cyc-title{font-weight:800}
+    .cyc-count{font-size:12px;color:var(--muted)}
+    .cyc-actions{display:flex;gap:6px}
+    .mini{background:#1c1f28;color:var(--text);border:1px solid var(--ring);border-radius:8px;padding:4px 6px;font-size:11px;line-height:1;cursor:pointer}
+    .mini:hover{opacity:.95}
+    .mini:active{transform:translateY(1px)}
+
+    /* Music menu */
+    [hidden]{display:none!important}
+    .menu{position:absolute;right:16px;top:56px;background:#1c1f28;border:1px solid var(--ring);border-radius:10px;padding:8px;z-index:50;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    .menu .mini{width:100%;text-align:left}
+
+    .tracker{padding:0 14px 14px;display:grid;gap:12px}
+    .t-row{display:grid;gap:6px}
+    .sq-groups{display:grid;gap:8px}
+    .week-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px}
+    .sq-line{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    .labels-line{display:flex;gap:6px;color:var(--muted);font-size:11px}
+    .wlabel{font-size:11px;color:var(--muted)}
+
+    .sq{width:18px;height:18px;border-radius:5px;border:1px solid #2b2f3a;background:#0f1116;display:inline-block}
+    .sq.done{background:var(--accent-2);border-color:var(--accent-2)}
+    .sq.inprog{background:var(--inprog);border-color:var(--inprog)}
+    .sq.current{outline:2px solid #ff6a0022;border-color:var(--accent)}
+
+    @media (max-width:740px){
+      .big-time{font-size:48px}
+      .sq{width:20px;height:20px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container grid">
+    <div class="card">
+      <div class="header">
+        <h1>Lean Interval Timer <span class="muted">— Pro</span></h1>
+        <div class="row">
+          <button id="oneClick" class="btn-good" title="Start next / resume">▶ Start Next</button>
+          <button id="loadFile" class="btn-secondary">Load cycles…</button>
+          <input type="file" id="filePicker" accept=".json,.js,.txt" hidden />
+          <button id="musicBtn" class="btn-secondary" title="YouTube music">Music</button>
+          <button id="resetProgress" class="btn-secondary" title="Reset timer">Reset Timer</button>
+        </div>
+        <div id="musicMenu" class="menu" hidden>
+          <button class="mini" data-preset="v_IGMHH9gJw">Techno 1</button>
+          <button class="mini" data-preset="JVETvJk-zmg">Techno 2</button>
+          <button class="mini" data-action="custom">Custom URL/ID…</button>
+          <button class="mini" data-action="off">Off</button>
+        </div>
+      </div>
+
+      <!-- TIMER -->
+      <section>
+        <div class="display">
+          <div class="crumb"><span id="crumbCycle">—</span><span class="sep">•</span><span id="crumbWeek">—</span><span class="sep">•</span><span id="crumbDay">—</span></div>
+          <div class="sub" id="meta"><span id="roundInfo">Round 1</span> · <span id="phase">Get Ready</span></div>
+          <div class="big-time" id="time">00:03</div>
+          <div class="sub stack">
+            <div class="stacked">
+              <div class="muted">Warm-up</div>
+              <div class="wc-text" id="warmup">—</div>
+            </div>
+            <div class="stacked">
+              <div class="muted">Cooldown</div>
+              <div class="wc-text" id="cooldown">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="exercises" id="exList">
+          <div class="exercise" id="ex0">Exercise 1</div>
+          <div class="exercise" id="ex1">Exercise 2</div>
+          <div class="exercise" id="ex2">Exercise 3</div>
+        </div>
+        <div id="gridDots" class="dots3"></div>
+      </section>
+
+      <!-- HISTORY (collapsible cycles) under timer -->
+      <section class="history">
+        <div id="history"></div>
+      </section>
+      <div id="ytHost" aria-hidden="true" style="width:1px;height:1px;overflow:hidden;position:absolute;left:-9999px;"></div>
+    </div>
+  </div>
+
+  <!-- lightweight beeps -->
+  <audio id="beep" preload="auto">
+    <source src="https://cdn.jsdelivr.net/gh/jbvoelker/snd@main/beep-800hz-50ms.mp3" type="audio/mpeg" />
+  </audio>
+  <audio id="gong" preload="auto">
+    <source src="https://cdn.jsdelivr.net/gh/jbvoelker/snd@main/gong-quick.mp3" type="audio/mpeg" />
+  </audio>
+
+  <script>
+    // ---------- Utilities ----------
+    const $ = sel => document.querySelector(sel);
+    const pad = n => String(n).padStart(2,'0');
+    const fmt = s => `${pad(Math.floor(s/60))}:${pad(Math.floor(s%60))}`;
+    const uid = (d,i) => `${d.cycle||'Cycle'}|${d.week||'Week'}|${d.day||'Day'}|${i}`;
+
+    const state = {
+      data: [],
+      idxWorkout: 0,
+      cycle: '', week: '', day: '',
+      work: 40, rest: 20, rounds: 3,
+      round: 1, phase: 'getready', seconds: 3,
+      exIdx: 0, running: false, interval: null,
+      tts: false
+    };
+
+    // ---- Built-in (fixed cycles) ----
+const builtInData = [
+            // Cycle 1
+            { cycle: "Cycle 1", week: "Week 1", day: "Monday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Crunch", exercise2: "Starfish Twist", exercise3: "Stork Stance", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 1", week: "Week 1", day: "Wednesday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Bridge", exercise2: "Starfish Twist", exercise3: "Stork Stance", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 1", week: "Week 1", day: "Friday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Parallel Leg Crunch", exercise3: "Parallel Leg Bridge", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 1", week: "Week 2", day: "Monday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Starfish Twist", exercise3: "Stork Stance", coolDown: "Spiderman Arm Circles" },
+            { cycle: "Cycle 1", week: "Week 2", day: "Wednesday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Bridge", exercise2: "Starfish Twist", exercise3: "Bottom Squat", coolDown: "Spiderman Arm Circles" },
+            { cycle: "Cycle 1", week: "Week 2", day: "Friday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Low Drop", exercise3: "Stork Stance", coolDown: "Spiderman Arm Circles" },
+            { cycle: "Cycle 1", week: "Week 3", day: "Monday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Crunch", exercise2: "Starfish Twist", exercise3: "High Knee March", coolDown: "Bloomers" },
+            { cycle: "Cycle 1", week: "Week 3", day: "Wednesday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Bridge", exercise2: "Low Drop", exercise3: "High Knee March", coolDown: "Bloomers" },
+            { cycle: "Cycle 1", week: "Week 3", day: "Friday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Kickout", exercise3: "Bottom Squat", coolDown: "Bloomers" },
+            { cycle: "Cycle 1", week: "Week 4", day: "Monday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Crunch", exercise2: "Parallel Leg Bridge", exercise3: "Arm Haulers", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 1", week: "Week 4", day: "Wednesday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Starfish Twist", exercise3: "Bottom Squat", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 1", week: "Week 4", day: "Friday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Low Drop", exercise3: "Streamline RDL", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 1", week: "Week 5", day: "Monday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Crunch", exercise2: "Kickout", exercise3: "High Knee March", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 1", week: "Week 5", day: "Wednesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Y Cuff", exercise3: "Parallel Leg Crunch", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 1", week: "Week 5", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Starfish Twist", exercise3: "T-arm Squat", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 1", week: "Week 6", day: "Monday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Crunch", exercise2: "Kickout", exercise3: "Bottom Squat", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 1", week: "Week 6", day: "Wednesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "High Kick", exercise3: "Streamline RDL", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 1", week: "Week 6", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Bent Leg Crunch", exercise3: "T-arm Squat", coolDown: "Hip Rolls" },
+
+            // Cycle 2
+            { cycle: "Cycle 2", week: "Week 1", day: "Monday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Starfish Twist", exercise3: "Stork Stance", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 1", day: "Thursday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Bridge", exercise2: "High Drop", exercise3: "Bottom Squat", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 1", day: "Tuesday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Bridge", exercise2: "High Drop", exercise3: "T-arm Squat", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 1", day: "Friday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "High Kick", exercise3: "High Knee Run", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 2", day: "Monday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Low Drop", exercise3: "Streamline RDL", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 2", day: "Thursday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Crunch", exercise2: "Kickout", exercise3: "Squat Thrust", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 2", day: "Tuesday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Starfish Drop", exercise3: "High Knee March", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 2", day: "Friday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "T-arm Reach", exercise2: "Starfish Drop", exercise3: "High Knee Run", coolDown: "Bloomers" },
+            { cycle: "Cycle 2", week: "Week 3", day: "Monday", timing: "45/15", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Low Drop", exercise3: "Streamline RDL", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 3", day: "Thursday", timing: "45/15", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Crunch", exercise2: "Kickout", exercise3: "Squat Thrust", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 3", day: "Tuesday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "DF Glide", exercise3: "Streamline RDL", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 3", day: "Friday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "T-arm Reach", exercise2: "High Drop", exercise3: "T-arm Squat", coolDown: "Bloomers" },
+            { cycle: "Cycle 2", week: "Week 4", day: "Monday", timing: "45/15", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Side Kick", exercise3: "Stork Stance", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 4", day: "Thursday", timing: "45/15", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Crunch", exercise2: "DF Glide", exercise3: "Squat Thrust", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 4", day: "Tuesday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Starfish Drop", exercise3: "Streamline RDL", coolDown: "Spiderman A-Frames" },
+            { cycle: "Cycle 2", week: "Week 4", day: "Friday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Double Drop", exercise3: "Side Squat", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 2", week: "Week 5", day: "Monday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Parallel Leg Bridge", exercise2: "Kickout", exercise3: "Side Squat", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 2", week: "Week 5", day: "Thursday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Y Cuff", exercise3: "Starfish Drop", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 2", week: "Week 5", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "T-arm Reach", exercise2: "High Kick", exercise3: "Squat Thrust", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 2", week: "Week 5", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Side Kick", exercise3: "Drop Thrust", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 2", week: "Week 6", day: "Monday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Parallel Leg Bridge", exercise2: "High Drop", exercise3: "Side Squat", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 2", week: "Week 6", day: "Thursday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Low Drop", exercise3: "Bottom Squat", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 2", week: "Week 6", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Side Kick", exercise3: "Drop Thrust", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 2", week: "Week 6", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "T-arm Reach", exercise2: "Kickout", exercise3: "Drop Thrust", coolDown: "Hip Rolls" },
+
+            // Cycle 3
+            { cycle: "Cycle 3", week: "Week 1", day: "Monday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "DF Glide", exercise2: "Let Me Ins", exercise3: "RDL-Squat", coolDown: "A-Frames" },
+            { cycle: "Cycle 3", week: "Week 1", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Bridge", exercise2: "Side Kick", exercise3: "Stork Stance", coolDown: "Arm Circles" },
+            { cycle: "Cycle 3", week: "Week 1", day: "Wednesday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Straight Leg Crunch", exercise2: "Starfish Drop", exercise3: "T-arm Squat", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 3", week: "Week 1", day: "Thursday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Crunch", exercise2: "High Kick", exercise3: "Squat Thrust", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 1", day: "Friday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "DF Glide", exercise2: "Let Me Ups", exercise3: "Drop Thrust", coolDown: "A-Frames" },
+            { cycle: "Cycle 3", week: "Week 2", day: "Monday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Double Drop", exercise3: "Parallel Leg Bridge", coolDown: "A-Frames" },
+            { cycle: "Cycle 3", week: "Week 2", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Bridge", exercise2: "T-arm Reach", exercise3: "Bottom Squat", coolDown: "Arm Circles" },
+            { cycle: "Cycle 3", week: "Week 2", day: "Wednesday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Crunch", exercise2: "High Drop", exercise3: "Side Squat", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 3", week: "Week 2", day: "Thursday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Starfish Twist", exercise3: "Cossack", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 2", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Starfish Bounce", exercise3: "T-arm Squat", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 3", day: "Monday", timing: "45/15", warmUp: "Side Lying Warm Up", exercise1: "Straight Leg Crunch", exercise2: "Starfish Drop", exercise3: "T-arm Squat", coolDown: "A-Frames" },
+            { cycle: "Cycle 3", week: "Week 3", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "High Knee Run", exercise3: "Stork Stance", coolDown: "Arm Circles" },
+            { cycle: "Cycle 3", week: "Week 3", day: "Wednesday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "High Drop", exercise3: "Straight Leg Bridge", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 3", week: "Week 3", day: "Thursday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Dive Bomber", exercise3: "Side Squat", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 3", day: "Friday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Crunch", exercise2: "High Knee Skip", exercise3: "Side Squat", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 4", day: "Monday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "DF Glide", exercise2: "Tripod Let Me Ins", exercise3: "Squat-RDL", coolDown: "A-Frames" },
+            { cycle: "Cycle 3", week: "Week 4", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Bridge", exercise2: "High Kick", exercise3: "T-arm Squat", coolDown: "Arm Circles" },
+            { cycle: "Cycle 3", week: "Week 4", day: "Wednesday", timing: "45/15", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Crunch", exercise2: "Double Drop", exercise3: "Squat-RDL", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 3", week: "Week 4", day: "Thursday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Starfish Twist", exercise3: "Cossack", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 4", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Starfish Bounce", exercise3: "T-arm Squat", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 5", day: "Monday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "DF Glide", exercise2: "Tripod Let Me Ups", exercise3: "Squat-RDL", coolDown: "A-Frames" },
+            { cycle: "Cycle 3", week: "Week 5", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Bridge", exercise2: "Side Kick", exercise3: "RDL-Squat", coolDown: "Arm Circles" },
+            { cycle: "Cycle 3", week: "Week 5", day: "Wednesday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Double Drop", exercise3: "Parallel Leg Bridge", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 3", week: "Week 5", day: "Thursday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Dive Bomber", exercise3: "Cossack", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 5", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Crunch", exercise2: "High Knee Skip", exercise3: "T-arm Squat", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 6", day: "Monday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "DF Glide", exercise2: "Tripod Let Me Ups", exercise3: "Squat-RDL", coolDown: "A-Frames" },
+            { cycle: "Cycle 3", week: "Week 6", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Bridge", exercise2: "Side Kick", exercise3: "RDL-Squat", coolDown: "Arm Circles" },
+            { cycle: "Cycle 3", week: "Week 6", day: "Wednesday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Double Drop", exercise3: "Parallel Leg Bridge", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 3", week: "Week 6", day: "Thursday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Dive Bomber", exercise3: "Cossack", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 3", week: "Week 6", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Crunch", exercise2: "High Knee Skip", exercise3: "T-arm Squat", coolDown: "Hip Rolls" },
+
+            // Cycle 4
+            { cycle: "Cycle 4", week: "Week 1", day: "Monday", timing: "60/0", warmUp: "Side Lying Warm Up", exercise1: "Starfish Drop", exercise2: "Let Me Up", exercise3: "T-arm Squat", coolDown: "A-Frames" },
+            { cycle: "Cycle 4", week: "Week 1", day: "Tuesday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Bridge", exercise2: "High Kick", exercise3: "Stork Stance", coolDown: "Arm Circles" },
+            { cycle: "Cycle 4", week: "Week 1", day: "Wednesday", timing: "60/0", warmUp: "Side Lying Warm Up", exercise1: "Double Drop", exercise2: "AG Pull Up", exercise3: "S2S Cossack", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 4", week: "Week 1", day: "Thursday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Arm Haulers", exercise3: "High Knee March", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 4", week: "Week 1", day: "Friday", timing: "60/0", warmUp: "Crawling Warm Up", exercise1: "Dive Bomber", exercise2: "Let Me In", exercise3: "T-arm Squat", coolDown: "A-Frames" },
+            { cycle: "Cycle 4", week: "Week 2", day: "Monday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "Straight Leg Crunch", exercise2: "Starfish Twist", exercise3: "High Knee Run", coolDown: "Arm Circles" },
+            { cycle: "Cycle 4", week: "Week 2", day: "Tuesday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "Dive Bomber", exercise2: "AG Pull Up", exercise3: "SL BSS", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 4", week: "Week 2", day: "Wednesday", timing: "60/0", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Low Drop", exercise3: "High Knee Skip", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 4", week: "Week 2", day: "Thursday", timing: "60/0", warmUp: "Crawling Warm Up", exercise1: "DF Glide", exercise2: "Tripod Let Me Ups", exercise3: "SL RDL", coolDown: "A-Frames" },
+            { cycle: "Cycle 4", week: "Week 2", day: "Friday", timing: "40/20", warmUp: "Crawling Warm Up", exercise1: "T-arm Reach", exercise2: "Straight Leg Bridge", exercise3: "Parallel Leg Crunch", coolDown: "Arm Circles" },
+            { cycle: "Cycle 4", week: "Week 3", day: "Monday", timing: "60/0", warmUp: "Side Lying Warm Up", exercise1: "Tripod Press", exercise2: "Let Me In", exercise3: "RDL-Squat", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 4", week: "Week 3", day: "Tuesday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "High Drop", exercise3: "Side Squat", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 4", week: "Week 3", day: "Wednesday", timing: "60/0", warmUp: "Side Lying Warm Up", exercise1: "T-arm Reach", exercise2: "Kickout", exercise3: "High Knee Skip", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 4", week: "Week 3", day: "Thursday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Crunch", exercise2: "Side Kick", exercise3: "RDL-Squat", coolDown: "A-Frames" },
+            { cycle: "Cycle 4", week: "Week 3", day: "Friday", timing: "60/0", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Crunch", exercise2: "High Knee Skip", exercise3: "Drop Thrust", coolDown: "Arm Circles" },
+            { cycle: "Cycle 4", week: "Week 4", day: "Monday", timing: "45/15", warmUp: "Side Lying Warm Up", exercise1: "T-arm Reach", exercise2: "Kickout", exercise3: "High Knee Skip", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 4", week: "Week 4", day: "Tuesday", timing: "60/0", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "High Drop", exercise3: "Side Squat", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 4", week: "Week 4", day: "Wednesday", timing: "45/15", warmUp: "Side Lying Warm Up", exercise1: "DF Glide", exercise2: "Let Me Ups", exercise3: "Bottom Squat", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 4", week: "Week 4", day: "Thursday", timing: "60/0", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Arm Haulers", exercise3: "High Knee March", coolDown: "A-Frames" },
+            { cycle: "Cycle 4", week: "Week 4", day: "Friday", timing: "45/15", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Crunch", exercise2: "Side Kick", exercise3: "RDL to Squat", coolDown: "Arm Circles" },
+            { cycle: "Cycle 4", week: "Week 5", day: "Monday", timing: "60/0", warmUp: "Side Lying Warm Up", exercise1: "Dive Bomber", exercise2: "AG Pull Up", exercise3: "SL BSS", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 4", week: "Week 5", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "T-arm Squat", exercise2: "High Knee Skip", exercise3: "RDL-Squat", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 4", week: "Week 5", day: "Wednesday", timing: "60/0", warmUp: "Side Lying Warm Up", exercise1: "DF Glide", exercise2: "Let Me Up", exercise3: "SL RDL", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 4", week: "Week 5", day: "Thursday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Bent Leg Crunch", exercise3: "T-arm Squat", coolDown: "A-Frames" },
+            { cycle: "Cycle 4", week: "Week 5", day: "Friday", timing: "60/0", warmUp: "Crawling Warm Up", exercise1: "Tripod Press", exercise2: "AG Pull Up", exercise3: "Stork Stance", coolDown: "Arm Circles" },
+            { cycle: "Cycle 4", week: "Week 6", day: "Monday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "T-arm Squat", exercise2: "High Knee Skip", exercise3: "RDL-Squat", coolDown: "Straddle Reach" },
+            { cycle: "Cycle 4", week: "Week 6", day: "Tuesday", timing: "60/0", warmUp: "Crawling Warm Up", exercise1: "DF Glide", exercise2: "Let Me Up", exercise3: "SL RDL", coolDown: "Iso Pigeon Stretch" },
+            { cycle: "Cycle 4", week: "Week 6", day: "Wednesday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Side Kick", exercise3: "Squat-RDL", coolDown: "Hip Rolls" },
+            { cycle: "Cycle 4", week: "Week 6", day: "Thursday", timing: "60/0", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Bent Leg Crunch", exercise3: "T-arm Squat", coolDown: "A-Frames" },
+            { cycle: "Cycle 4", week: "Week 6", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Tripod Press", exercise2: "AG Pull Up", exercise3: "Stork Stance", coolDown: "Arm Circles" },
+        ];
+
+    // ------------- Progress persistence -------------
+    const COLLAPSE_KEY = 'leanTimerCollapse';
+    function loadProgress(){ return JSON.parse(localStorage.getItem('leanTimerProgress')||'{}'); }
+    function saveProgress(p){ localStorage.setItem('leanTimerProgress', JSON.stringify(p)); }
+    function markDone(wid){ const p=loadProgress(); p[wid]={...(p[wid]||{}), done:true, inProgress:false, ts:Date.now()}; saveProgress(p); }
+    function markInProgress(wid, snap){ const p=loadProgress(); p[wid]={...(p[wid]||{}), done:false, inProgress:true, snap, ts:Date.now()}; saveProgress(p); }
+    function clearProgress(){ localStorage.removeItem('leanTimerProgress'); renderHistory(); }
+    function getCollapse(){ return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}'); }
+    function setCollapse(obj){ localStorage.setItem(COLLAPSE_KEY, JSON.stringify(obj)); }
+
+    function storeResume(snap){ localStorage.setItem('leanTimerResume', JSON.stringify(snap)); }
+    function loadResume(){ try{return JSON.parse(localStorage.getItem('leanTimerResume')||'null')}catch(_){return null} }
+    function clearResume(){ localStorage.removeItem('leanTimerResume'); }
+
+    // ------------- Parser (CSP-safe) -------------
+    function stripComments(s){ return s.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/gm,'$1'); }
+    function extractArrayText(s){ const start = s.indexOf('['); const end = s.lastIndexOf(']'); if(start !== -1 && end !== -1 && end>start) return s.slice(start, end+1); return s.trim(); }
+    function jsLikeToJson(s){ let out = s.replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":'); out = out.replace(/,\s*([}\]])/g, '$1'); return out; }
+    function parseCyclesText(txt){ if(!txt) return null; let s = stripComments(txt);
+      // Try pure JSON
+      try{ const j=JSON.parse(s); if(Array.isArray(j)) return j; }catch(_){ }
+      // Try extract array from JS-like text
+      let arr = extractArrayText(s); arr = jsLikeToJson(arr);
+      try{ return JSON.parse(arr); }catch(_){ }
+      try{ return JSON.parse(arr.replace(/'([^']*)'/g,'"$1"')); }catch(err){ console.error('Parse failed', err); }
+      return null; }
+
+    // ------------- Timing helpers -------------
+    function parseTiming(entry){
+      let work=40, rest=20, rounds=3;
+      const t = String(entry.timing||'').trim();
+      const m = t.match(/^(\d+)\s*\/\s*(\d+)(?:\s*[xX]\s*(\d+))?/);
+      if(m){ work=+m[1]; rest=+m[2]; if(m[3]) rounds=+m[3]; }
+      if(Number.isFinite(entry.rounds)) rounds = +entry.rounds;
+      if(Number.isFinite(entry.sets)) rounds = +entry.sets;
+      return {work, rest, rounds};
+    }
+
+    // ------------- Tracker data helpers -------------
+    function groupByCycleWeek(){
+      const map = new Map();
+      state.data.forEach((d,i)=>{
+        const cyc = d.cycle || 'Cycle';
+        const wk = d.week || 'Week';
+        if(!map.has(cyc)) map.set(cyc, new Map());
+        const m = map.get(cyc);
+        if(!m.has(wk)) m.set(wk, []);
+        m.get(wk).push({d,i});
+      });
+      return map; // Map<cycle, Map<week, items[]>>
+    }
+
+    function abbrDay(day){ if(!day) return '—'; const s=String(day); return s.slice(0,2); }
+
+    // ------------- HISTORY (collapsible cycles) -------------
+    function renderHistory(){
+      const host = $('#history');
+      const prog = loadProgress();
+      const groups = groupByCycleWeek();
+      const collapse = getCollapse();
+      host.innerHTML = '';
+
+      [...groups.entries()].forEach(([cycle, weeks])=>{
+        const flat = [].concat(...[...weeks.values()].map(v=>v));
+        const doneCnt = flat.filter(x=> prog[uid(x.d,x.i)]?.done).length;
+        const total = flat.length;
+
+        const det = document.createElement('details');
+        det.className='cycle';
+        const openDefault = (cycle === state.cycle); // open current cycle by default
+        det.open = collapse[cycle] !== undefined ? !!collapse[cycle] : openDefault;
+
+        const sum = document.createElement('summary');
+        sum.innerHTML = `<span class="cyc-title">${cycle}</span><div class="cyc-actions"><button class="mini mark-all" data-cycle="${cycle}" title="ganzen Cycle als done markieren">✓ all</button><button class="mini reset-all" data-cycle="${cycle}" title="Cycle resetten">↺</button></div><span class="cyc-count">${doneCnt}/${total} done</span>`;
+        det.appendChild(sum);
+
+        const section = document.createElement('div');
+        section.className='tracker';
+        const inner = [...weeks.entries()].map(([week, items])=>{
+          const squares = items.map(x=>{
+            const id = uid(x.d,x.i);
+            const p = prog[id]||{}; const classes=['sq'];
+            if(p.done) classes.push('done'); else if(p.inProgress) classes.push('inprog');
+            if(state.idxWorkout===x.i) classes.push('current');
+            const title = `${x.d.day||'Day'} — ${x.d.week||'Week'} — ${x.d.cycle||'Cycle'}\n${x.d.timing||''}`;
+            return `<button class="${classes.join(' ')}" title="${title}" data-idx="${x.i}"></button>`;
+          }).join('');
+          const labels = items.map(x=> `<span title="${x.d.day||''}">${abbrDay(x.d.day)}</span>`).join('<span style="width:6px"></span>');
+          return `<div class="t-row">
+                    <div class="week-row" data-week="${week}">
+                      <div class="sq-line">${squares}</div>
+                      <div class="wlabel">${week}</div>
+                    </div>
+                    <div class="labels-line">${labels}</div>
+                  </div>`;
+        }).join('');
+        section.innerHTML = `<div class="sq-groups">${inner}</div>`;
+        det.appendChild(section);
+        host.appendChild(det);
+
+        // persist open/closed state
+        det.addEventListener('toggle',()=>{ const c=getCollapse(); c[cycle]=det.open; setCollapse(c); });
+
+        // cycle-level actions
+        const markBtn = sum.querySelector('.mark-all');
+        const resetBtn = sum.querySelector('.reset-all');
+        if(markBtn){ markBtn.addEventListener('click', (ev)=>{ ev.preventDefault(); ev.stopPropagation(); markCycleAsDone(cycle); }); }
+        if(resetBtn){ resetBtn.addEventListener('click', (ev)=>{ ev.preventDefault(); ev.stopPropagation(); resetCycleProgress(cycle); }); }
+      });
+
+      // attach square handlers (short tap cycles status; long-press autostarts)
+      host.querySelectorAll('.sq').forEach(btn=>{
+        let lpTimer=null, longPressed=false;
+        function startLP(){ longPressed=false; lpTimer=setTimeout(()=>{ longPressed=true; const i=+btn.getAttribute('data-idx'); if(Number.isInteger(i)) selectWorkout(i,false); },500); }
+        function endLP(){ if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } }
+        btn.addEventListener('pointerdown', startLP);
+        btn.addEventListener('pointerup', ()=>{ endLP(); if(!longPressed){
+          const i = +btn.getAttribute('data-idx'); const entry = state.data[i]; const id = uid(entry,i);
+          const p = loadProgress(); const cur = p[id]||{};
+          if(cur.done){ delete p[id]; }
+          else if(cur.inProgress){ p[id] = { ...cur, done:true, inProgress:false, ts:Date.now() }; }
+          else { p[id] = { done:false, inProgress:true, ts:Date.now() }; }
+          saveProgress(p); renderHistory();
+        }});
+        btn.addEventListener('pointercancel', endLP);
+        btn.addEventListener('pointerleave', endLP);
+      });
+    }
+
+    // ------------- Dots: 3 exercises × rounds columns -------------
+    function buildDots(){
+      const totalCols = state.rounds;
+      const host = $('#gridDots'); host.innerHTML = '';
+      for(let ri=0; ri<3; ri++){
+        const cell = document.createElement('div'); cell.className='dots-cell';
+        const row = document.createElement('div'); row.className='dots-row'; row.dataset.row = String(ri);
+        for(let c=0;c<totalCols;c++){
+          const dot = document.createElement('span'); dot.className='dot'; dot.dataset.col = String(c); dot.dataset.row = String(ri);
+          row.appendChild(dot);
+        }
+        cell.appendChild(row); host.appendChild(cell);
+      }
+      updateDots();
+    }
+
+    function updateDots(){
+      const dots = Array.from(document.querySelectorAll('.dot'));
+      dots.forEach(d=>d.classList.remove('done','current'));
+      const rNow = state.round; // 1-based
+      for(let ex=0; ex<3; ex++){
+        for(let col=0; col<state.rounds; col++){
+          const idxSel = `.dot[data-row="${ex}"][data-col="${col}"]`;
+          const el = document.querySelector(idxSel); if(!el) continue;
+          const roundIndex = col+1; // 1-based
+          let status = 'pending';
+          if(roundIndex < rNow) status = 'done';
+          else if(roundIndex > rNow) status = 'pending';
+          else { // same round
+            if(ex < state.exIdx) status = 'done';
+            else if(ex === state.exIdx) status = 'current';
+            else status = 'pending';
+          }
+          if(status==='done') el.classList.add('done');
+          if(status==='current') el.classList.add('current');
+        }
+      }
+    }
+
+    // ------------- Timer wiring -------------
+    function setActiveExercise(){ for(let i=0;i<3;i++){ const el = $(`#ex${i}`); el.classList.toggle('active', i===state.exIdx); } }
+
+    function renderExercises(entry){
+      const names = [entry.exercise1, entry.exercise2, entry.exercise3];
+      [0,1,2].forEach(i=>{ $(`#ex${i}`).textContent = names[i] || `Exercise ${i+1}`; });
+      $('#warmup').textContent = entry.warmUp || '—';
+      $('#cooldown').textContent = entry.coolDown || '—';
+      state.exIdx = 0; setActiveExercise();
+    }
+
+    function renderMeta(){
+      $('#crumbCycle').textContent = state.cycle || '—';
+      $('#crumbWeek').textContent  = state.week  || '—';
+      $('#crumbDay').textContent   = state.day   || '—';
+      $('#roundInfo').textContent = `Round ${state.round}`;
+      $('#phase').textContent = ({getready:'Get Ready',work:'WORK',rest:'REST'})[state.phase] || '—';
+      $('#time').textContent = fmt(state.seconds);
+      const t = $('#time');
+      t.classList.remove('phase-work','phase-rest','phase-getready');
+      if(state.phase==='work') t.classList.add('phase-work');
+      else if(state.phase==='rest') t.classList.add('phase-rest');
+      else t.classList.add('phase-getready');
+      updateDots();
+    }
+
+    // --- Audio: countdown/work/rest + YouTube ---
+    let ac=null;
+    function initAudioCtx(){ if(!ac){ try{ ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ ac=null; } } }
+    function tone(freq=520, ms=140){ try{ initAudioCtx(); if(!ac) return; const o=ac.createOscillator(); const g=ac.createGain(); o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(ac.destination); const t0=ac.currentTime; g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.22,t0+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t0+ms/1000); o.start(); o.stop(t0+ms/1000); }catch(_){ }
+    }
+    function playCountdown(){
+      // short tick (mp3), used only during initial Get Ready
+      const a=$('#beep'); a.currentTime=0; a.play().catch(()=>{});
+    }
+    function playWork(){ const a=$('#gong'); a.currentTime=0; a.play().catch(()=>{}); }
+    function playRest(){ tone(520,160); }
+
+    function parseYTId(input){ if(!input) return null; input=String(input).trim(); const m1=input.match(/^[a-zA-Z0-9_-]{11}$/); if(m1) return m1[0]; const m2=input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/); return m2? m2[1]: null; }
+
+    // ---- Music presets & YT helpers ----
+    const YTPRESETS = {
+      'Techno 1':'v_IGMHH9gJw',
+      'Techno 2':'JVETvJk-zmg'
+    };
+    function ytFrame(){ return document.querySelector('#ytHost iframe'); }
+    function ytCommand(func,args=[]){ const f=ytFrame(); if(!f) return; try{ f.contentWindow.postMessage(JSON.stringify({event:'command',func, args}), '*'); }catch(_){} }
+    function ytMute(on){ ytCommand(on? 'mute' : 'unMute'); }
+    let muteTimer=null;
+    function scheduleMuteWindow(){ try{ clearTimeout(muteTimer); }catch(_){} ytMute(true); muteTimer = setTimeout(()=>ytMute(false), 4000); }
+
+    function buildYT(force=false){
+      const id = localStorage.getItem('leanTimerYT');
+      if(!id) return;
+
+      const host=$('#ytHost');
+      if(!host) return;
+
+      if(!force && host.dataset.id===id && host.firstChild) return;
+
+      host.innerHTML='';
+      const ifr=document.createElement('iframe');
+      ifr.setAttribute('allow','autoplay; encrypted-media');
+      ifr.setAttribute('frameborder','0');
+      ifr.setAttribute('allowfullscreen','');
+      ifr.width='1';
+      ifr.height='1';
+
+      // Only pass origin when it's http(s); file:// can be problematic.
+      const originParam = (location.origin && /^https?:/i.test(location.origin))
+        ? `&origin=${encodeURIComponent(location.origin)}`
+        : '';
+
+      ifr.src = `https://www.youtube.com/embed/${id}?autoplay=1&controls=0&playsinline=1&loop=1&playlist=${id}&enablejsapi=1${originParam}`;
+      host.appendChild(ifr);
+      host.dataset.id=id;
+    }
+
+    function ensureYTOnStart(){ const id=localStorage.getItem('leanTimerYT'); if(!id) return; buildYT(); const b=$('#musicBtn'); if(b) b.textContent='Music ✓'; }
+    function toggleMusic(){ toggleMusicMenu(); }
+    function toggleMusicMenu(){ const m=$('#musicMenu'); if(!m) return; m.hidden = !m.hidden; }
+    function hideMusicMenu(){ const m=$('#musicMenu'); if(m) m.hidden=true; }
+    function setMusicId(id){ if(!id) return; localStorage.setItem('leanTimerYT', id); buildYT(true); const b=$('#musicBtn'); if(b) b.textContent='Music ✓'; setTimeout(()=>{ ytCommand('playVideo'); }, 400); }
+    function turnMusicOff(){ const host=$('#ytHost'); if(host) host.innerHTML=''; localStorage.removeItem('leanTimerYT'); const b=$('#musicBtn'); if(b) b.textContent='Music'; hideMusicMenu(); }
+
+    // Menu interactions
+    $('#musicMenu').addEventListener('click', (e)=>{ const btn = e.target.closest('button'); if(!btn) return;
+      if(btn.dataset.preset){ setMusicId(btn.dataset.preset); hideMusicMenu(); return; }
+      if(btn.dataset.action==='custom'){ const custom = prompt('YouTube-Link oder Video-ID:'); const id=parseYTId(custom||''); if(!id){ alert('Ungültiger YouTube-Link/ID.'); return; } setMusicId(id); hideMusicMenu(); return; }
+      if(btn.dataset.action==='off'){ turnMusicOff(); return; }
+    });
+    document.addEventListener('click', (e)=>{ const m=$('#musicMenu'); if(!m || m.hidden) return; const b=$('#musicBtn'); if(m.contains(e.target) || e.target===b) return; hideMusicMenu(); });
+
+    function resetTimer(){
+      clearInterval(state.interval); state.interval = null; state.running=false;
+      state.round = 1; state.phase='getready'; state.seconds=3; state.exIdx=0;
+      buildDots();
+      renderMeta(); setActiveExercise();
+      $('#oneClick').textContent = '▶ Start Next';
+    }
+    function resetCurrentWorkoutState(){
+      // reset timer UI and clear only the in-progress snapshot for current workout
+      resetTimer();
+      try{
+        const entry = state.data[state.idxWorkout];
+        const id = uid(entry,state.idxWorkout);
+        const p = loadProgress();
+        if(p[id]){ p[id].inProgress = false; delete p[id].snap; saveProgress(p); }
+        clearResume(); // do not auto-resume after reset
+        renderHistory();
+      }catch(_){/*ignore*/}
+    }
+
+    function parseAndApplyTiming(entry){
+      const t = parseTiming(entry);
+      state.work = t.work; state.rest = t.rest; state.rounds = t.rounds;
+    }
+
+    function selectWorkout(i, autostart=false){
+      state.idxWorkout = i; const entry = state.data[i]; if(!entry) return;
+      parseAndApplyTiming(entry);
+      state.cycle = entry.cycle||''; state.week=entry.week||''; state.day=entry.day||'';
+      renderExercises(entry); resetTimer(); renderMeta(); renderHistory();
+      const p = loadProgress()[uid(entry,i)]; const snap = p?.snap;
+      if(autostart){ if(snap){ applySnapshot(snap); startPause(); } else { startPause(); } }
+    }
+
+    function snapshot(){ return { idxWorkout: state.idxWorkout, round: state.round, phase: state.phase, seconds: state.seconds, exIdx: state.exIdx, work: state.work, rest: state.rest, rounds: state.rounds, cycle: state.cycle, week: state.week, day: state.day }; }
+    function applySnapshot(s){ if(!s) return; state.idxWorkout=s.idxWorkout; state.round=s.round; state.phase=s.phase; state.seconds=s.seconds; state.exIdx=s.exIdx; state.work=s.work; state.rest=s.rest; state.rounds=s.rounds; state.cycle=s.cycle; state.week=s.week; state.day=s.day; buildDots(); renderMeta(); setActiveExercise(); }
+
+    function finish(){
+      clearInterval(state.interval); state.interval=null; state.running=false; state.phase='done'; $('#time').textContent='DONE';
+      playWork();
+      const entry = state.data[state.idxWorkout]; markDone(uid(entry,state.idxWorkout)); clearResume(); renderHistory(); $('#oneClick').textContent = '▶ Start Next'; updateDots();
+    }
+
+    function nextInterval(){
+      if(state.phase==='getready'){ state.phase='work'; state.seconds=state.work; playWork(); return; }
+      if(state.phase==='work'){
+        state.phase = state.rest>0 ? 'rest' : 'work'; state.seconds = state.rest>0 ? state.rest : state.work;
+        if(state.phase==='rest') playRest(); else playWork();
+        if(state.rest<=0){ state.exIdx=(state.exIdx+1)%3; setActiveExercise(); if(state.exIdx===0){ if(state.round<state.rounds){ state.round++; } else { finish(); return; } } }
+        return;
+      }
+      if(state.phase==='rest'){
+        state.exIdx=(state.exIdx+1)%3; setActiveExercise(); if(state.exIdx===0){ if(state.round<state.rounds){ state.round++; } else { finish(); return; } }
+        state.phase='work'; state.seconds=state.work; playWork(); return;
+      }
+    }
+
+    function tick(){
+      if(state.phase==='getready' && state.seconds<=3 && state.seconds>0) playCountdown();
+      // prepare music mute window: 2s before and 2s after each WORK/REST switch
+      if((state.phase==='work' || state.phase==='rest') && state.seconds===2){ scheduleMuteWindow(); }
+      if(state.seconds<=0){ nextInterval(); renderMeta(); persistInProgress(); return; }
+      state.seconds--; renderMeta();
+      if(state.seconds % 2 === 0) persistInProgress();
+    }
+
+    function startPause(){
+      const entry = state.data[state.idxWorkout];
+      if(!state.running){
+        state.running=true;
+        try{ initAudioCtx(); if(ac && ac.state==='suspended') ac.resume(); }catch(_){}
+        ensureYTOnStart();
+        state.interval=setInterval(tick,1000);
+        renderMeta();
+        // Mark as in-progress at start
+        markInProgress(uid(entry,state.idxWorkout), snapshot());
+        $('#oneClick').textContent='⏸ Pause';
+        renderHistory();
+        return;
+      }
+      clearInterval(state.interval); state.interval=null; state.running=false; $('#oneClick').textContent='▶ Resume'; persistInProgress(); renderHistory();
+    }
+
+    function persistInProgress(){ const entry = state.data[state.idxWorkout]; const wid = uid(entry,state.idxWorkout); const snap = snapshot(); markInProgress(wid, snap); storeResume(snap); renderHistory(); }
+    function markCycleAsDone(cycle){ const p = loadProgress(); state.data.forEach((d,i)=>{ if(String(d.cycle||'')===cycle){ const id=uid(d,i); p[id] = { done:true, inProgress:false, ts:Date.now() }; } }); saveProgress(p); renderHistory(); }
+    function resetCycleProgress(cycle){ const p = loadProgress(); state.data.forEach((d,i)=>{ if(String(d.cycle||'')===cycle){ const id=uid(d,i); delete p[id]; } }); saveProgress(p); clearResume(); renderHistory(); }
+
+    // ------------- DOM bindings -------------
+    $('#oneClick').addEventListener('click', ()=>{
+      if(state.running){ startPause(); return; }
+      const res = loadResume(); const prog = loadProgress();
+      if(res){ const i = res.idxWorkout||0; selectWorkout(i,false); applySnapshot(res); startPause(); return; }
+      const next = state.data.findIndex((d,i)=> !(prog[uid(d,i)]?.done)); const idx = next>=0? next : 0; selectWorkout(idx,true);
+    });
+    $('#loadFile').addEventListener('click',()=> $('#filePicker').click());
+    $('#filePicker').addEventListener('change', async (e)=>{ const file = e.target.files?.[0]; if(!file) return; const txt = await file.text(); const arr = parseCyclesText(txt); if(!Array.isArray(arr)){ alert('Could not parse file. Use JSON [ {...}, ... ] or JS-like: const data = [ {...}, ... ];'); return; } setData(arr); });
+    $('#musicBtn').addEventListener('click', toggleMusic);
+    $('#resetProgress').addEventListener('click', ()=>{ resetCurrentWorkoutState(); });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown',e=>{
+      if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+      if(e.code==='Space'){ e.preventDefault(); if(state.phase==='done'){ $('#oneClick').click(); } else { startPause(); } }
+      if(e.key==='r' || e.key==='R'){ resetTimer(); }
+      if(e.key==='n' || e.key==='N'){ state.seconds=0; tick(); }
+      if(e.key==='v' || e.key==='V'){ state.tts = !state.tts; }
+    });
+
+    // ---------- Data hookup ----------
+    function setData(newData){
+      state.data = Array.isArray(newData)&&newData.length? newData : builtInData;
+      const res = loadResume();
+      if(res){ selectWorkout(res.idxWorkout||0, false); applySnapshot(res); }
+      else {
+        // First start: prefer Cycle 1 / Week 1 / Monday
+        const idxPref = state.data.findIndex(d=> String(d.cycle||'').toLowerCase()==='cycle 1' && String(d.week||'').toLowerCase()==='week 1' && /^mo(n(day)?|ntag)?$/i.test(String(d.day||'')) );
+        if(idxPref>=0) selectWorkout(idxPref, false);
+        else { const prog = loadProgress(); const next = state.data.findIndex((d,i)=> !(prog[uid(d,i)]?.done)); selectWorkout(next>=0? next:0, false); }
+      }
+      renderHistory();
+    }
+
+    // Init
+    (function init(){ setData(builtInData); })();
+  </script>
+</body>
+</html>
