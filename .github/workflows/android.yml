@@ -13,7 +13,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # JDK 17 für AGP 8.x
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -21,26 +20,15 @@ jobs:
           java-version: 17
           cache: gradle
 
-      # Android SDK + cmdline-tools + Lizenzen akzeptieren
+      # Wichtig: packages als EINE Zeile, keine Pipes/Mehrzeiler, kein 'cache' Input
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
-          # akzeptiert automatisch die SDK-Lizenzen
-          cache: true
+          accept-android-sdk-licenses: true
+          packages: platform-tools platforms;android-34 build-tools;34.0.0
 
-      # Optional: Gradle-Cache zusätzlich beschleunigen
-      - name: Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Build Debug APK (no wrapper)
+      # Baut im Unterordner Lean9App, ohne Gradle Wrapper
+      - name: Build Debug APK
         uses: gradle/gradle-build-action@v3
         with:
           gradle-version: 8.8
