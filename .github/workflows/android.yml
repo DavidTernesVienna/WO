@@ -20,20 +20,21 @@ jobs:
           java-version: 17
           cache: gradle
 
-      # Nur cmdline-tools + Lizenzen, KEINE packages hier!
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
-          cmdline-tools-version: 16.0
-
-      # Installiere Pakete explizit in EINEM run-Step (eine Zeile, in Quotes)
-      - name: Install required SDK packages
+      # Android SDK ist bereits vorinstalliert auf GitHub Runners.
+      # Wir setzen nur die Umgebungsvariable und rufen sdkmanager DIREKT auf.
+      - name: Accept licenses & install SDK packages
         shell: bash
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
 
-      # Baue im Unterordner Lean9App
+          # Lizenzen akzeptieren (nicht interaktiv)
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin/sdkmanager" --licenses
+
+          # Benötigte Pakete installieren (ALLE ARGUMENTE IN *EINER* ZEILE!)
+          "$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin/sdkmanager" \
+            "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      # Build im Unterordner Lean9App ohne Wrapper (robust)
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v3
         with:
