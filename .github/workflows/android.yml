@@ -43,14 +43,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
-      - name: Build Debug APK
-        run: ./gradlew --no-daemon assembleDebug
+      - name: Build Debug APK (no wrapper)
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.8
+          arguments: assembleDebug
+          build-root-directory: Lean9App
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Lean9App-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: Lean9App/app/build/outputs/apk/debug/app-debug.apk
