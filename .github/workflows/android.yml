@@ -20,14 +20,20 @@ jobs:
           java-version: 17
           cache: gradle
 
-      # Wichtig: packages als EINE Zeile, keine Pipes/Mehrzeiler, kein 'cache' Input
+      # Nur cmdline-tools + Lizenzen, KEINE packages hier!
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           accept-android-sdk-licenses: true
-          packages: platform-tools platforms;android-34 build-tools;34.0.0
+          cmdline-tools-version: 16.0
 
-      # Baut im Unterordner Lean9App, ohne Gradle Wrapper
+      # Installiere Pakete explizit in EINEM run-Step (eine Zeile, in Quotes)
+      - name: Install required SDK packages
+        shell: bash
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      # Baue im Unterordner Lean9App
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v3
         with:
