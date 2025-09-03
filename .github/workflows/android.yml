@@ -1,57 +1,41 @@
 name: Android CI
-
 on:
-  push:
-    branches: [ "main" ]
+  push: { branches: [ "main" ] }
   workflow_dispatch:
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # JDK 17 für AGP 8.x
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
           cache: gradle
 
-      # Android SDK + cmdline-tools + Lizenzen akzeptieren
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
-          # akzeptiert automatisch die SDK-Lizenzen
-          cache: true
+      - name: Accept licenses & install SDK packages
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
+          if [ -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          else
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" || \
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      # Optional: Gradle-Cache zusätzlich beschleunigen
-      - name: Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Build Debug APK (no wrapper)
-        uses: gradle/gradle-build-action@v3
+      - uses: gradle/gradle-build-action@v3
         with:
           gradle-version: 8.8
           arguments: assembleDebug
           build-root-directory: Lean9App
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: Lean9App-debug
           path: Lean9App/app/build/outputs/apk/debug/app-debug.apk
