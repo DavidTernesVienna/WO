@@ -1,0 +1,8 @@
+{
+  "name": "Lean Interval Timer",
+  "short_name": "LeanTimer",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0b0b0c",
+  "theme_color": "#ff6a00"
+}
