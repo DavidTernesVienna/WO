@@ -6,7 +6,8 @@ import { launch } from 'puppeteer';
 function createServer() {
   const dist = path.resolve('dist');
   return http.createServer((req, res) => {
-    const filePath = path.join(dist, req.url === '/' ? '/index.html' : req.url);
+    const urlPath = req.url.startsWith('/WO/') ? req.url.slice(3) : req.url;
+    const filePath = path.join(dist, urlPath === '/' ? '/index.html' : urlPath);
     fs.readFile(filePath, (err, data) => {
       if (err) {
         res.writeHead(404);
@@ -34,7 +35,7 @@ async function run() {
       }
     }
   });
-  await page.goto('http://localhost:3000/index.html', {waitUntil: 'networkidle0'});
+  await page.goto('http://localhost:3000/WO/index.html', {waitUntil: 'networkidle0'});
   await page.click('#oneClick');
   await new Promise(r => setTimeout(r, 500));
   await page.click('#oneClick');

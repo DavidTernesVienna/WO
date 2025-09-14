@@ -1,8 +1,11 @@
 const CACHE = 'lean-timer-cache-v1';
+const BASE = '/WO/';
 const URLS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  BASE,
+  BASE + 'index.html',
+  BASE + 'manifest.json',
+  BASE + 'icon-192.png',
+  BASE + 'icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
