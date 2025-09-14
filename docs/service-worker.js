@@ -1,5 +1,5 @@
 const CACHE = 'lean-timer-cache-v1';
-const BASE = '%BASE_URL%';
+const BASE = '/WO/';
 const URLS = [
   BASE,
   BASE + 'index.html',

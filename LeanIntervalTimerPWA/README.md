@@ -6,17 +6,26 @@ This project wraps the existing Lean Interval Timer into a Progressive Web App.
 
 ```bash
 npm install
-npm run build
-npm start
+npm run build   # build for local/Vercel
+npm run dev     # serve dist at http://localhost:3000
 ```
 
-`npm start` serves the built files from the `dist` folder on http://localhost:3000.
+`npm run dev` serves the built files from the `dist` folder on http://localhost:3000.
+
+To build the GitHub Pages version:
+
+```bash
+npm run build:pages
+```
 
 ## Deploy
 
-* GitHub Pages Quelle: `main` → `/docs`
-* Lokaler Test: `npm start` (http://localhost:3000)
-* Online-URL: `https://USERNAME.github.io/WO/`
+The build script sets the correct base path for each host:
+
+* **Vercel/local**: `base /` → `npm run build`
+* **GitHub Pages**: `base /WO/` → `npm run build:pages`
+
+`vercel.json` contains a rewrite so deep links on Vercel resolve to `index.html`.
 
 ## Known limitations
 

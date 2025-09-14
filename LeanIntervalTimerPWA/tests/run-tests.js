@@ -3,10 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import { launch } from 'puppeteer';
 
+const BASE = process.env.BASE_URL || '/';
+
 function createServer() {
   const dist = path.resolve('dist');
   return http.createServer((req, res) => {
-    const urlPath = req.url.startsWith('/WO/') ? req.url.slice(3) : req.url;
+    const cut = BASE.length > 1 ? BASE.length - 1 : 0;
+    const urlPath = req.url.startsWith(BASE) ? req.url.slice(cut) : req.url;
     const filePath = path.join(dist, urlPath === '/' ? '/index.html' : urlPath);
     fs.readFile(filePath, (err, data) => {
       if (err) {
@@ -35,7 +38,8 @@ async function run() {
       }
     }
   });
-  await page.goto('http://localhost:3000/WO/index.html', {waitUntil: 'networkidle0'});
+  await page.goto(`http://localhost:3000${BASE}index.html`, {waitUntil: 'networkidle0'});
+  await page.$eval('h1', el => el.textContent.includes('Lean Interval Timer'));
   await page.click('#oneClick');
   await new Promise(r => setTimeout(r, 500));
   await page.click('#oneClick');
