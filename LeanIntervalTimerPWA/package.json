@@ -2,11 +2,14 @@
   "name": "lean-interval-timer-pwa",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "build": "rm -rf dist && mkdir -p dist && cp -r public/* dist/ && cp src/service-worker.js dist/service-worker.js",
-    "start": "node server.js",
-    "test": "node tests/run-tests.js",
-    "build:pages": "node scripts/build-pages.js"
+    "dev": "node server.js",
+    "build": "node scripts/build.js dist /",
+    "preview": "node server.js",
+    "lint": "node -e \"console.log('lint skipped')\"",
+    "test": "BASE_URL=/ node tests/run-tests.js",
+    "build:pages": "node scripts/build.js ../docs /WO/"
   },
   "devDependencies": {
     "puppeteer": "^23.8.1"
