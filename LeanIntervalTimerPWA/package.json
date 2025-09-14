@@ -5,7 +5,8 @@
   "scripts": {
     "build": "rm -rf dist && mkdir -p dist && cp -r public/* dist/ && cp src/service-worker.js dist/service-worker.js",
     "start": "node server.js",
-    "test": "node tests/run-tests.js"
+    "test": "node tests/run-tests.js",
+    "build:pages": "node scripts/build-pages.js"
   },
   "devDependencies": {
     "puppeteer": "^23.8.1"

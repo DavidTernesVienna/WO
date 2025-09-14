@@ -12,6 +12,12 @@ npm start
 
 `npm start` serves the built files from the `dist` folder on http://localhost:3000.
 
+## Deploy
+
+* GitHub Pages Quelle: `main` → `/docs`
+* Lokaler Test: `npm start` (http://localhost:3000)
+* Online-URL: `https://USERNAME.github.io/WO/`
+
 ## Known limitations
 
 * The service worker caches only the core assets. Any external resources such as YouTube music streams require network access.
