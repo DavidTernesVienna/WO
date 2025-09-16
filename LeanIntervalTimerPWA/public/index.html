@@ -71,6 +71,12 @@
     .menu{position:absolute;right:16px;top:56px;background:#1c1f28;border:1px solid var(--ring);border-radius:10px;padding:8px;z-index:50;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
     .menu .mini{width:100%;text-align:left}
 
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;padding:20px;z-index:150;backdrop-filter:blur(2px);}
+    .modal-card{background:var(--card);border:1px solid var(--ring);border-radius:16px;box-shadow:0 18px 36px rgba(0,0,0,.45);padding:24px;display:grid;gap:18px;max-width:320px;width:100%;text-align:center;}
+    .modal-card h2{margin:0;font-size:20px;color:var(--text-strong);}
+    .modal-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.45;}
+    .modal-actions{display:grid;gap:10px;}
+
     .tracker{padding:0 14px 14px;display:grid;gap:12px}
     .t-row{display:grid;gap:6px}
     .sq-groups{display:grid;gap:8px}
@@ -94,9 +100,9 @@
   <div class="container grid">
     <div class="card">
       <div class="header">
-        <h1>Lean Interval Timer <span class="muted">— Pro</span></h1>
+        <h1>Lean Interval Timer </h1>
         <div class="row">
-          <button id="oneClick" class="btn-good" title="Start next / resume">▶ Start Next</button>
+          <button id="oneClick" class="btn-good" title="Start">Start</button>
           <button id="loadFile" class="btn-secondary">Load cycles…</button>
           <input type="file" id="filePicker" accept=".json,.js,.txt" hidden />
           <button id="musicBtn" class="btn-secondary" title="YouTube music">Music</button>
@@ -151,6 +157,17 @@
     <source src="https://cdn.jsdelivr.net/gh/jbvoelker/snd@main/gong-quick.mp3" type="audio/mpeg" />
   </audio>
 
+  <div id="completedModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="completedTitle" hidden>
+    <div class="modal-card">
+      <h2 id="completedTitle">Session complete</h2>
+      <p>All three exercises hit 3 rounds. Nice work!</p>
+      <div class="modal-actions">
+        <button id="completedRestart" class="btn-good">Restart</button>
+        <button id="completedShare" class="btn-secondary" hidden>Share</button>
+        <button id="completedClose" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
   <script>
     // ---------- Utilities ----------
     const $ = sel => document.querySelector(sel);
@@ -168,6 +185,79 @@
       tts: false
     };
 
+    const SESSION_KEY = 'leanTimerSession';
+    function sessionDefaults(){ return { reps:[0,0,0], shownCompleted:false, workoutId:null }; }
+    function clampRepValue(v){ const n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.min(3, Math.floor(n))) : 0; }
+    let session = loadSession();
+
+    function loadSession(){
+      try{
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if(!raw) return sessionDefaults();
+        const parsed = JSON.parse(raw);
+        const base = sessionDefaults();
+        if(Array.isArray(parsed?.reps)){
+          base.reps = [0,1,2].map(i => clampRepValue(parsed.reps[i]));
+        }
+        base.shownCompleted = Boolean(parsed?.shownCompleted);
+        base.workoutId = typeof parsed?.workoutId === 'string' ? parsed.workoutId : null;
+        return base;
+      }catch(_){
+        return sessionDefaults();
+      }
+    }
+    function saveSession(){
+      try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); }catch(_){ }
+    }
+    function ensureSessionForWorkout(id){
+      if(session.workoutId === id) return;
+      session = sessionDefaults();
+      session.workoutId = id;
+      saveSession();
+    }
+    function resetSessionProgress(){
+      session.reps = [0,0,0];
+      session.shownCompleted = false;
+      saveSession();
+    }
+    function markExerciseComplete(index){
+      if(index<0 || index>2) return;
+      const current = session.reps[index] || 0;
+      const next = Math.min(3, current + 1);
+      if(next === current) return;
+      session.reps[index] = next;
+      saveSession();
+    }
+    function allExercisesComplete(){ return session.reps.every(r => r >= 3); }
+    function checkCompleted(){
+      if(session.shownCompleted) return;
+      if(!allExercisesComplete()) return;
+      showCompletedModal();
+    }
+    function showCompletedModal(){
+      if(session.shownCompleted) return;
+      session.shownCompleted = true;
+      saveSession();
+      if(state.running){ startPause(); }
+      const modal = document.getElementById('completedModal');
+      if(modal){ modal.hidden = false; }
+      const restartBtn = document.getElementById('completedRestart');
+      if(restartBtn && typeof restartBtn.focus === 'function'){ restartBtn.focus(); }
+    }
+    function hideCompletedModal(){
+      const modal = document.getElementById('completedModal');
+      if(modal) modal.hidden = true;
+    }
+    async function shareCompleted(){
+      if(!(navigator && typeof navigator.share === 'function')) return;
+      try{
+        await navigator.share({ title: document.title || 'Lean Interval Timer', text: 'Completed the session: each exercise 3x.' });
+      }catch(_){ }
+    }
+    function restartSession(){
+      hideCompletedModal();
+      resetCurrentWorkoutState();
+    }
     // ---- Built-in (fixed cycles) ----
 const builtInData = [
             // Cycle 1
@@ -482,12 +572,90 @@ const builtInData = [
     }
     function playCountdown(){
       // short tick (mp3), used only during initial Get Ready
-      const a=$('#beep'); a.currentTime=0; a.play().catch(()=>{});
+      playBeepLoud('beep');
     }
-    function playWork(){ const a=$('#gong'); a.currentTime=0; a.play().catch(()=>{}); }
+    function playWork(){ playBeepLoud('gong'); }
     function playRest(){ tone(520,160); }
 
-    function parseYTId(input){ if(!input) return null; input=String(input).trim(); const m1=input.match(/^[a-zA-Z0-9_-]{11}$/); if(m1) return m1[0]; const m2=input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/); return m2? m2[1]: null; }
+    // --- Ducking / Volume helpers ---
+    const num01 = (v, d) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : d;
+    };
+    const DUCK_KEY = 'duckVolume', BEEP_KEY = 'beepVolume', MUSIC_KEY = 'musicVolume';
+    const DUCK_VOLUME = num01(localStorage.getItem(DUCK_KEY), 0.2);
+    const BEEP_VOLUME = num01(localStorage.getItem(BEEP_KEY), 1.0);
+    let musicVolumeState = num01(localStorage.getItem(MUSIC_KEY), 0.6);
+
+    function getMusicVolume() {
+      try {
+        if (window.player && typeof player.getVolume === 'function') {
+          return Math.max(0, Math.min(1, player.getVolume() / 100));
+        }
+      } catch (e) {}
+      const el = document.querySelector('#ytHost audio, audio#music, audio[data-music]');
+      if (el) {
+        musicVolumeState = el.volume;
+        return el.volume;
+      }
+      return musicVolumeState;
+    }
+    function setMusicVolume(v) {
+      const clamped = num01(v, musicVolumeState);
+      musicVolumeState = clamped;
+      try {
+        if (window.player && typeof player.setVolume === 'function') {
+          player.setVolume(Math.round(clamped * 100));
+          return;
+        }
+      } catch (e) {}
+      try {
+        ytCommand('setVolume', [Math.round(clamped * 100)]);
+      } catch (e) {}
+      const el = document.querySelector('#ytHost audio, audio#music, audio[data-music]');
+      if (el) el.volume = clamped;
+    }
+    function syncUserVolumeFromCurrent() {
+      const v = getMusicVolume();
+      if (v != null) { localStorage.setItem(MUSIC_KEY, String(v)); }
+    }
+
+    let duckCount = 0, restoreTimer = null, lastUserVolume = null;
+    function duckStart(to = DUCK_VOLUME) {
+      if (lastUserVolume == null) {
+        const cur = getMusicVolume();
+        if (cur != null) lastUserVolume = cur;
+      }
+      duckCount++;
+      setMusicVolume(to);
+      if (restoreTimer) { clearTimeout(restoreTimer); restoreTimer = null; }
+    }
+    function duckEnd(delayMs = 120) {
+      duckCount = Math.max(0, duckCount - 1);
+      if (duckCount === 0) {
+        if (restoreTimer) clearTimeout(restoreTimer);
+        restoreTimer = setTimeout(() => {
+          if (lastUserVolume != null) { setMusicVolume(lastUserVolume); }
+          lastUserVolume = null;
+          restoreTimer = null;
+          syncUserVolumeFromCurrent();
+        }, delayMs);
+      }
+    }
+
+    function playBeepLoud(id = 'beep') {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.volume = num01(localStorage.getItem(BEEP_KEY), BEEP_VOLUME);
+      try { el.currentTime = 0; } catch(e) {}
+      const activeDuck = num01(localStorage.getItem(DUCK_KEY), DUCK_VOLUME);
+      duckStart(activeDuck);
+      const onEnd = () => { el.removeEventListener('ended', onEnd); duckEnd(120); };
+      el.addEventListener('ended', onEnd);
+      el.play().catch(() => duckEnd(0));
+    }
+
+
 
     // ---- Music presets & YT helpers ----
     const YTPRESETS = {
@@ -499,6 +667,24 @@ const builtInData = [
     function ytMute(on){ ytCommand(on? 'mute' : 'unMute'); }
     let muteTimer=null;
     function scheduleMuteWindow(){ try{ clearTimeout(muteTimer); }catch(_){} ytMute(true); muteTimer = setTimeout(()=>ytMute(false), 4000); }
+
+
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data) return;
+      let payload = data;
+      if (typeof data === 'string') {
+        try { payload = JSON.parse(data); } catch (_) { return; }
+      }
+      if (!payload || payload.event !== 'infoDelivery') return;
+      const info = payload.info;
+      if (!info || typeof info.volume !== 'number') return;
+      const vol = num01(info.volume / 100, musicVolumeState);
+      musicVolumeState = vol;
+      if (duckCount > 0) return;
+      localStorage.setItem(MUSIC_KEY, String(vol));
+      lastUserVolume = null;
+    });
 
     function buildYT(force=false){
       const id = localStorage.getItem('leanTimerYT');
@@ -525,6 +711,10 @@ const builtInData = [
       ifr.src = `https://www.youtube.com/embed/${id}?autoplay=1&controls=0&playsinline=1&loop=1&playlist=${id}&enablejsapi=1${originParam}`;
       host.appendChild(ifr);
       host.dataset.id=id;
+      setTimeout(() => {
+        setMusicVolume(musicVolumeState);
+        try { ytCommand('getVolume'); } catch (_) {}
+      }, 600);
     }
 
     function ensureYTOnStart(){ const id=localStorage.getItem('leanTimerYT'); if(!id) return; buildYT(); const b=$('#musicBtn'); if(b) b.textContent='Music ✓'; }
@@ -543,13 +733,16 @@ const builtInData = [
     document.addEventListener('click', (e)=>{ const m=$('#musicMenu'); if(!m || m.hidden) return; const b=$('#musicBtn'); if(m.contains(e.target) || e.target===b) return; hideMusicMenu(); });
 
     function resetTimer(){
+      hideCompletedModal();
       clearInterval(state.interval); state.interval = null; state.running=false;
       state.round = 1; state.phase='getready'; state.seconds=3; state.exIdx=0;
       buildDots();
       renderMeta(); setActiveExercise();
-      $('#oneClick').textContent = '▶ Start Next';
+      $('#oneClick').textContent = 'Start';
     }
     function resetCurrentWorkoutState(){
+      hideCompletedModal();
+      resetSessionProgress();
       // reset timer UI and clear only the in-progress snapshot for current workout
       resetTimer();
       try{
@@ -569,10 +762,12 @@ const builtInData = [
 
     function selectWorkout(i, autostart=false){
       state.idxWorkout = i; const entry = state.data[i]; if(!entry) return;
+      const wid = uid(entry,i);
+      ensureSessionForWorkout(wid);
       parseAndApplyTiming(entry);
       state.cycle = entry.cycle||''; state.week=entry.week||''; state.day=entry.day||'';
       renderExercises(entry); resetTimer(); renderMeta(); renderHistory();
-      const p = loadProgress()[uid(entry,i)]; const snap = p?.snap;
+      const p = loadProgress()[wid]; const snap = p?.snap;
       if(autostart){ if(snap){ applySnapshot(snap); startPause(); } else { startPause(); } }
     }
 
@@ -582,12 +777,14 @@ const builtInData = [
     function finish(){
       clearInterval(state.interval); state.interval=null; state.running=false; state.phase='done'; $('#time').textContent='DONE';
       playWork();
-      const entry = state.data[state.idxWorkout]; markDone(uid(entry,state.idxWorkout)); clearResume(); renderHistory(); $('#oneClick').textContent = '▶ Start Next'; updateDots();
+      const entry = state.data[state.idxWorkout]; markDone(uid(entry,state.idxWorkout)); clearResume(); renderHistory(); $('#oneClick').textContent = 'Start'; updateDots();
+      checkCompleted();
     }
 
     function nextInterval(){
       if(state.phase==='getready'){ state.phase='work'; state.seconds=state.work; playWork(); return; }
       if(state.phase==='work'){
+        markExerciseComplete(state.exIdx);
         state.phase = state.rest>0 ? 'rest' : 'work'; state.seconds = state.rest>0 ? state.rest : state.work;
         if(state.phase==='rest') playRest(); else playWork();
         if(state.rest<=0){ state.exIdx=(state.exIdx+1)%3; setActiveExercise(); if(state.exIdx===0){ if(state.round<state.rounds){ state.round++; } else { finish(); return; } } }
@@ -640,6 +837,18 @@ const builtInData = [
     $('#filePicker').addEventListener('change', async (e)=>{ const file = e.target.files?.[0]; if(!file) return; const txt = await file.text(); const arr = parseCyclesText(txt); if(!Array.isArray(arr)){ alert('Could not parse file. Use JSON [ {...}, ... ] or JS-like: const data = [ {...}, ... ];'); return; } setData(arr); });
     $('#musicBtn').addEventListener('click', toggleMusic);
     $('#resetProgress').addEventListener('click', ()=>{ resetCurrentWorkoutState(); });
+
+    const completedRestartBtn = document.getElementById('completedRestart');
+    if(completedRestartBtn) completedRestartBtn.addEventListener('click', restartSession);
+    const completedCloseBtn = document.getElementById('completedClose');
+    if(completedCloseBtn) completedCloseBtn.addEventListener('click', () => { hideCompletedModal(); });
+    const completedShareBtn = document.getElementById('completedShare');
+    if(completedShareBtn){
+      if(typeof navigator !== 'undefined' && typeof navigator.share === 'function'){
+        completedShareBtn.hidden = false;
+        completedShareBtn.addEventListener('click', shareCompleted);
+      }
+    }
 
     // Keyboard shortcuts
     window.addEventListener('keydown',e=>{

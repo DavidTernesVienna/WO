@@ -1,0 +1,8 @@
+rules:
+  - "Code läuft im Browser/PWA (Chrome, Android WebView) – kein Node.js/require/fs."
+  - "Bearbeite nur Dateien unter LeanIntervalTimerPWA/public und src. Finger weg von dist/ und node_modules/."
+  - "Änderungen klein halten; erst 'Plan' (Dateiliste + kurze Schritte), dann nur die genannten Dateien patchen."
+  - "Keine externen Libs; benutze vorhandene CSS-Variablen/Styles."
+  - "Service Worker: nur in PROD registrieren; Dev darf SW nicht ändern/aktivieren."
+  - "Persistenz über localStorage; Bestehende Keys respektieren."
+  - "Liefere am Ende: (1) kurze Prüf-Checkliste, (2) manuelle Testschritte."
