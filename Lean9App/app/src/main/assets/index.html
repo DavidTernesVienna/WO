@@ -94,7 +94,9 @@
       <div class="header">
         <h1>Lean Interval Timer <span class="muted">— Pro</span></h1>
         <div class="row">
+          <button id="prevWorkout" class="btn-secondary" title="Go back to the previous exercise">◀ Back</button>
           <button id="oneClick" class="btn-good" title="Start next / resume">▶ Start Next</button>
+          <button id="nextWorkout" class="btn-secondary" title="Start the next exercise">Next ▶</button>
           <button id="loadFile" class="btn-secondary">Load cycles…</button>
           <input type="file" id="filePicker" accept=".json,.js,.txt" hidden />
           <button id="musicBtn" class="btn-secondary" title="YouTube music">Music</button>
@@ -574,6 +576,15 @@ const builtInData = [
       if(autostart){ if(snap){ applySnapshot(snap); startPause(); } else { startPause(); } }
     }
 
+    function shiftWorkout(delta){
+      if(!Number.isInteger(delta) || !state.data.length) return;
+      if(state.running){ persistInProgress(); }
+      const len = state.data.length;
+      let nextIdx = (state.idxWorkout + delta) % len;
+      if(nextIdx < 0) nextIdx += len;
+      selectWorkout(nextIdx, true);
+    }
+
     function snapshot(){ return { idxWorkout: state.idxWorkout, round: state.round, phase: state.phase, seconds: state.seconds, exIdx: state.exIdx, work: state.work, rest: state.rest, rounds: state.rounds, cycle: state.cycle, week: state.week, day: state.day }; }
     function applySnapshot(s){ if(!s) return; state.idxWorkout=s.idxWorkout; state.round=s.round; state.phase=s.phase; state.seconds=s.seconds; state.exIdx=s.exIdx; state.work=s.work; state.rest=s.rest; state.rounds=s.rounds; state.cycle=s.cycle; state.week=s.week; state.day=s.day; buildDots(); renderMeta(); setActiveExercise(); }
 
@@ -634,6 +645,8 @@ const builtInData = [
       if(res){ const i = res.idxWorkout||0; selectWorkout(i,false); applySnapshot(res); startPause(); return; }
       const next = state.data.findIndex((d,i)=> !(prog[uid(d,i)]?.done)); const idx = next>=0? next : 0; selectWorkout(idx,true);
     });
+    $('#nextWorkout').addEventListener('click', ()=>{ shiftWorkout(1); });
+    $('#prevWorkout').addEventListener('click', ()=>{ shiftWorkout(-1); });
     $('#loadFile').addEventListener('click',()=> $('#filePicker').click());
     $('#filePicker').addEventListener('change', async (e)=>{ const file = e.target.files?.[0]; if(!file) return; const txt = await file.text(); const arr = parseCyclesText(txt); if(!Array.isArray(arr)){ alert('Could not parse file. Use JSON [ {...}, ... ] or JS-like: const data = [ {...}, ... ];'); return; } setData(arr); });
     $('#musicBtn').addEventListener('click', toggleMusic);
