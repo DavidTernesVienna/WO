@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Vite (3000)",
+      "type": "npm",
+      "script": "dev",
+      "path": "LeanIntervalTimerPWA",
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": [{ "regexp": ".+" }],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*vite v\\d+\\.\\d+\\.\\d+.*",
+          "endsPattern": ".*Local:\\s+http://localhost:3000.*"
+        }
+      }
+    }
+  ]
+}
