@@ -1,20 +1,40 @@
 name: Build Pages
+
 on:
   push:
     branches: [ main ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
+
+      # baue deine PWA
       - run: cd LeanIntervalTimerPWA && npm ci && npm run build:pages
+
+      # Kopiere Build-Ergebnis bewusst nach ./docs (sauberer Upload-Ordner)
+      - run: |
+          rm -rf ./docs
+          mkdir -p ./docs
+          cp -r LeanIntervalTimerPWA/public/* ./docs/
+
+      # Debug: prüfe, ob ex-nav im index.html enthalten ist
+      - run: |
+          echo "--- ./docs (vor Upload) ---"
+          ls -la ./docs
+          echo "--- Suche ex-nav ---"
+          grep -n "ex-nav" ./docs/index.html || true
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./docs
+
   deploy:
     needs: build
     permissions:
