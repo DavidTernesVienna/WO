@@ -17,23 +17,17 @@ jobs:
       # baue deine PWA
       - run: cd LeanIntervalTimerPWA && npm ci && npm run build:pages
 
-      # Kopiere Build-Ergebnis bewusst nach ./docs (sauberer Upload-Ordner)
+      # Debug: prüfe, ob ex-nav im index.html vorhanden ist
       - run: |
-          rm -rf ./docs
-          mkdir -p ./docs
-          cp -r LeanIntervalTimerPWA/public/* ./docs/
-
-      # Debug: prüfe, ob ex-nav im index.html enthalten ist
-      - run: |
-          echo "--- ./docs (vor Upload) ---"
-          ls -la ./docs
+          echo "--- LeanIntervalTimerPWA/public ---"
+          ls -la LeanIntervalTimerPWA/public
           echo "--- Suche ex-nav ---"
-          grep -n "ex-nav" ./docs/index.html || true
+          grep -n "ex-nav" LeanIntervalTimerPWA/public/index.html || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs
+          path: LeanIntervalTimerPWA/public
 
   deploy:
     needs: build
