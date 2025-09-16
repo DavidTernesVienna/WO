@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lean Interval Timer — Pro</title>
+  <title>Lean Interval Timer</title>
   <style>
     :root{
       --bg:#0b0b0c;--card:#151518;--muted:#9aa3ab;--accent:#ff6a00;--accent-2:#27ae60;--error:#e63946;--ring:#20222a;
@@ -15,7 +16,7 @@
     .container{max-width:1000px;width:100%;margin:24px auto;padding:20px}
     .grid{display:grid;gap:16px}
 
-    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;box-shadow:0 10px 28px rgba(0,0,0,.35);}
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;box-shadow:0 10px 28px rgba(0,0,0,.35);}    
     .header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--ring);position:relative}
     h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.2px}
     .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
@@ -38,6 +39,8 @@
     .stack{gap:42px}
     .stack .stacked{display:grid;gap:4px;justify-items:center}
     .wc-text{color:var(--text-strong);text-align:center;font-weight:600}
+    .control-row{display:flex;justify-content:center;gap:12px;padding-top:8px}
+    .control-row button{min-width:110px}
 
     .exercises{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0 18px 6px}
     .exercise{border:1px solid var(--ring);border-radius:12px;padding:12px 10px;min-height:70px;text-align:center;display:grid;place-items:center;background:#0f1116}
@@ -124,6 +127,10 @@
               <div class="wc-text" id="cooldown">—</div>
             </div>
           </div>
+          <div class="control-row">
+            <button id="prevExercise" class="btn-secondary" title="Go back to the previous exercise">◀ Back</button>
+            <button id="nextExercise" class="btn-secondary" title="Skip to the next exercise">Next ▶</button>
+          </div>
         </div>
         <div class="exercises" id="exList">
           <div class="exercise" id="ex0">Exercise 1</div>
@@ -187,7 +194,7 @@ const builtInData = [
             { cycle: "Cycle 1", week: "Week 6", day: "Monday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Parallel Leg Crunch", exercise2: "Kickout", exercise3: "Bottom Squat", coolDown: "Hip Rolls" },
             { cycle: "Cycle 1", week: "Week 6", day: "Wednesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Bent Leg Bridge", exercise2: "High Kick", exercise3: "Streamline RDL", coolDown: "Hip Rolls" },
             { cycle: "Cycle 1", week: "Week 6", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Y Cuff", exercise2: "Bent Leg Crunch", exercise3: "T-arm Squat", coolDown: "Hip Rolls" },
-
+            
             // Cycle 2
             { cycle: "Cycle 2", week: "Week 1", day: "Monday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "Arm Haulers", exercise2: "Starfish Twist", exercise3: "Stork Stance", coolDown: "Spiderman A-Frames" },
             { cycle: "Cycle 2", week: "Week 1", day: "Thursday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Bridge", exercise2: "High Drop", exercise3: "Bottom Squat", coolDown: "Spiderman A-Frames" },
@@ -213,7 +220,7 @@ const builtInData = [
             { cycle: "Cycle 2", week: "Week 6", day: "Thursday", timing: "50/10", warmUp: "Side Lying Warm Up", exercise1: "Bent Leg Bridge", exercise2: "Low Drop", exercise3: "Bottom Squat", coolDown: "Iso Pigeon Stretch" },
             { cycle: "Cycle 2", week: "Week 6", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Arm Haulers", exercise2: "Side Kick", exercise3: "Drop Thrust", coolDown: "Hip Rolls" },
             { cycle: "Cycle 2", week: "Week 6", day: "Friday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "T-arm Reach", exercise2: "Kickout", exercise3: "Drop Thrust", coolDown: "Hip Rolls" },
-
+            
             // Cycle 3
             { cycle: "Cycle 3", week: "Week 1", day: "Monday", timing: "40/20", warmUp: "Side Lying Warm Up", exercise1: "DF Glide", exercise2: "Let Me Ins", exercise3: "RDL-Squat", coolDown: "A-Frames" },
             { cycle: "Cycle 3", week: "Week 1", day: "Tuesday", timing: "50/10", warmUp: "Crawling Warm Up", exercise1: "Straight Leg Bridge", exercise2: "Side Kick", exercise3: "Stork Stance", coolDown: "Arm Circles" },
@@ -297,7 +304,7 @@ const builtInData = [
     function stripComments(s){ return s.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/gm,'$1'); }
     function extractArrayText(s){ const start = s.indexOf('['); const end = s.lastIndexOf(']'); if(start !== -1 && end !== -1 && end>start) return s.slice(start, end+1); return s.trim(); }
     function jsLikeToJson(s){ let out = s.replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":'); out = out.replace(/,\s*([}\]])/g, '$1'); return out; }
-    function parseCyclesText(txt){ if(!txt) return null; let s = stripComments(txt);
+    function parseCyclesText(txt){ if(!txt) return null; let s = stripComments(txt); 
       // Try pure JSON
       try{ const j=JSON.parse(s); if(Array.isArray(j)) return j; }catch(_){ }
       // Try extract array from JS-like text
@@ -499,10 +506,10 @@ const builtInData = [
     function scheduleMuteWindow(){ try{ clearTimeout(muteTimer); }catch(_){} ytMute(true); muteTimer = setTimeout(()=>ytMute(false), 4000); }
 
     function buildYT(force=false){
-      const id = localStorage.getItem('leanTimerYT');
+      const id = localStorage.getItem('leanTimerYT'); 
       if(!id) return;
 
-      const host=$('#ytHost');
+      const host=$('#ytHost'); 
       if(!host) return;
 
       if(!force && host.dataset.id===id && host.firstChild) return;
@@ -512,7 +519,7 @@ const builtInData = [
       ifr.setAttribute('allow','autoplay; encrypted-media');
       ifr.setAttribute('frameborder','0');
       ifr.setAttribute('allowfullscreen','');
-      ifr.width='1';
+      ifr.width='1'; 
       ifr.height='1';
 
       // Only pass origin when it's http(s); file:// can be problematic.
@@ -521,7 +528,7 @@ const builtInData = [
         : '';
 
       ifr.src = `https://www.youtube.com/embed/${id}?autoplay=1&controls=0&playsinline=1&loop=1&playlist=${id}&enablejsapi=1${originParam}`;
-      host.appendChild(ifr);
+      host.appendChild(ifr); 
       host.dataset.id=id;
     }
 
@@ -597,6 +604,66 @@ const builtInData = [
       }
     }
 
+    function jumpExercise(direction){
+      if(!direction) return;
+      const entry = state.data[state.idxWorkout];
+      if(!entry) return;
+      if(state.phase==='done') return;
+
+      if(direction > 0){
+        if(state.phase==='getready'){
+          state.phase='work';
+          state.seconds=state.work;
+          setActiveExercise();
+          playWork();
+          renderMeta();
+          persistInProgress();
+          return;
+        }
+        let nextRound = state.round;
+        let nextEx = state.exIdx + 1;
+        if(nextEx >= 3){
+          nextEx = 0;
+          if(nextRound < state.rounds){
+            nextRound++;
+          } else {
+            finish();
+            return;
+          }
+        }
+        state.round = nextRound;
+        state.exIdx = nextEx;
+        state.phase='work';
+        state.seconds=state.work;
+        setActiveExercise();
+        playWork();
+        renderMeta();
+        persistInProgress();
+        return;
+      }
+
+      if(state.phase==='getready') return;
+
+      let prevRound = state.round;
+      let prevEx = state.exIdx - 1;
+      if(prevEx < 0){
+        if(prevRound > 1){
+          prevRound--;
+          prevEx = 2;
+        } else {
+          prevEx = 0;
+        }
+      }
+      state.round = prevRound;
+      state.exIdx = prevEx;
+      state.phase='work';
+      state.seconds=state.work;
+      setActiveExercise();
+      playWork();
+      renderMeta();
+      persistInProgress();
+    }
+
     function tick(){
       if(state.phase==='getready' && state.seconds<=3 && state.seconds>0) playCountdown();
       // prepare music mute window: 2s before and 2s after each WORK/REST switch
@@ -634,6 +701,8 @@ const builtInData = [
       if(res){ const i = res.idxWorkout||0; selectWorkout(i,false); applySnapshot(res); startPause(); return; }
       const next = state.data.findIndex((d,i)=> !(prog[uid(d,i)]?.done)); const idx = next>=0? next : 0; selectWorkout(idx,true);
     });
+    $('#nextExercise').addEventListener('click', ()=> jumpExercise(1));
+    $('#prevExercise').addEventListener('click', ()=> jumpExercise(-1));
     $('#loadFile').addEventListener('click',()=> $('#filePicker').click());
     $('#filePicker').addEventListener('change', async (e)=>{ const file = e.target.files?.[0]; if(!file) return; const txt = await file.text(); const arr = parseCyclesText(txt); if(!Array.isArray(arr)){ alert('Could not parse file. Use JSON [ {...}, ... ] or JS-like: const data = [ {...}, ... ];'); return; } setData(arr); });
     $('#musicBtn').addEventListener('click', toggleMusic);
