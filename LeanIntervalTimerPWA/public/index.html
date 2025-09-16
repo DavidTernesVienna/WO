@@ -742,5 +742,75 @@ const builtInData = [
     // Init
     (function init(){ setData(builtInData); })();
   </script>
+  
+  <!-- Update Banner -->
+<style>
+  #updateBanner {
+    display: none;
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1c1f28;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+    font-size: 14px;
+    z-index: 1000;
+  }
+  #updateBanner button {
+    margin-left: 12px;
+    background: var(--accent, #ff6a00);
+    border: none;
+    color: #111;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+</style>
+
+<div id="updateBanner">
+  Neue Version verfügbar
+  <button id="reloadBtn">Neu laden</button>
+</div>
+
+<script>
+  // Kill-Switch: ?clearSW=1 in URL löscht SW + Caches
+  if (location.search.includes('clearSW=1') && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations()
+      .then(rs => Promise.all(rs.map(r => r.unregister())))
+      .then(() => caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))))
+      .then(() => {
+        console.log("Service Worker & Caches entfernt. Lade neu…");
+        location.replace(location.pathname);
+      });
+  }
+
+  // SW-Update-Banner
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js').then(reg => {
+      reg.onupdatefound = () => {
+        const newWorker = reg.installing;
+        newWorker.onstatechange = () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // Banner zeigen
+            document.getElementById("updateBanner").style.display = "block";
+            // Reload-Button
+            document.getElementById("reloadBtn").onclick = () => {
+              newWorker.postMessage("SKIP_WAITING");
+              newWorker.addEventListener("statechange", () => {
+                if (newWorker.state === "activated") {
+                  location.reload();
+                }
+              });
+            };
+          }
+        };
+      };
+    });
+  }
+</script>
 </body>
 </html>
