@@ -171,7 +171,16 @@
       exIdx: 0, running: false, interval: null,
       tts: false
     };
-
+  // Kill-Switch: ?clearSW=1 in URL löscht SW + Caches
+  if (location.search.includes('clearSW=1') && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations()
+      .then(rs => Promise.all(rs.map(r => r.unregister())))
+      .then(() => caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))))
+      .then(() => {
+        console.log("Service Worker & Caches entfernt. Lade neu…");
+        location.replace(location.pathname); // URL säubern und Seite reloaden
+      });
+  }
     // ---- Built-in (fixed cycles) ----
 const builtInData = [
             // Cycle 1
