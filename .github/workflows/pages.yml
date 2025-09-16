@@ -17,12 +17,12 @@ jobs:
       # baue deine PWA
       - run: cd LeanIntervalTimerPWA && npm ci && npm run build:pages
 
-      # Debug: prüfe, ob ex-nav im index.html vorhanden ist
+      # Debug: prüfe, ob prev/next Buttons im index.html vorhanden sind
       - run: |
           echo "--- LeanIntervalTimerPWA/public ---"
           ls -la LeanIntervalTimerPWA/public
-          echo "--- Suche ex-nav ---"
-          grep -n "ex-nav" LeanIntervalTimerPWA/public/index.html || true
+          echo "--- Suche prevExercise ---"
+          grep -n "prevExercise" LeanIntervalTimerPWA/public/index.html || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
